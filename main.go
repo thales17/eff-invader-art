@@ -11,47 +11,36 @@ import (
 const (
 	windowW   = 1024
 	windowH   = 768
-	pixelSize = 2
+	pixelSize = 3
 )
 
 type sprite struct {
-	eff.Shape
 	frames         [][]eff.Point
 	frameIndex     int
 	ticks          int
 	frameTickCount int
-	color          eff.Color
+	point          eff.Point
 }
 
-func (s *sprite) drawFrame() {
-	s.Clear()
+func (s *sprite) getRects() []eff.Rect {
+	rects := []eff.Rect{}
 	for _, p := range s.frames[s.frameIndex] {
-		s.FillRect(eff.Rect{
-			X: p.X * pixelSize,
-			Y: p.Y * pixelSize,
+		rects = append(rects, eff.Rect{
+			X: s.point.X + p.X*pixelSize,
+			Y: s.point.Y + p.Y*pixelSize,
 			W: pixelSize,
 			H: pixelSize,
-		}, s.color)
+		})
 	}
+
+	return rects
 }
 
-func (s *sprite) tick() {
-	s.ticks++
-	if s.ticks == s.frameTickCount {
-		s.ticks = 0
-		s.frameIndex = (s.frameIndex + 1) % len(s.frames)
-		s.drawFrame()
-	}
-}
-
-func newSprite(frames [][]eff.Point, frameTickCount int, color eff.Color) *sprite {
+func newSprite(frames [][]eff.Point, frameTickCount int) *sprite {
 	s := &sprite{
 		frames:     frames,
 		frameIndex: 0,
-		color:      color,
 	}
-
-	s.drawFrame()
 	return s
 }
 
@@ -71,15 +60,12 @@ func main() {
 		invaders := []*sprite{}
 		for j := 0; j < rows; j++ {
 			for i := 0; i < cols; i++ {
-				invader := newSprite(Invader1, 10, white)
-				invader.SetRect(eff.Rect{
+				invader := newSprite(Invader1, 10)
+				invader.point = eff.Point{
 					X: i * w,
 					Y: j * h,
-					W: sizeX,
-					H: sizeY,
-				})
+				}
 				invaders = append(invaders, invader)
-				canvas.AddChild(invader)
 			}
 		}
 
@@ -91,11 +77,21 @@ func main() {
 			if ticks == frameTickCount {
 				ticks = 0
 				frameIndex = (frameIndex + 1) % 2
+				canvas.Clear()
+				rects := []eff.Rect{}
 				for _, inv := range invaders {
 					inv.frameIndex = frameIndex
-					inv.drawFrame()
+					rects = append(rects, inv.getRects()...)
 				}
+				canvas.FillRects(rects, white)
 			}
 		})
+
+		canvas.Clear()
+		rects := []eff.Rect{}
+		for _, inv := range invaders {
+			rects = append(rects, inv.getRects()...)
+		}
+		canvas.FillRects(rects, white)
 	})
 }
